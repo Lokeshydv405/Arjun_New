@@ -1,0 +1,4 @@
+apiKey = "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"
+apikey2 = "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"
+WeatherAPI = "d8fe02bc97779230b767f8be325baeb3"
+chatgpt1 = "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"  # Replace with your OpenAI API key

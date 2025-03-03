@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            width: 90%;
+            max-width: 800px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-list {
+    flex: 1;
+    padding-right: 20px;
+    border-right: 2px solid #ddd;
+    max-height: 70vh; /* Restrict height */
+    overflow-y: auto; /* Enable scrolling */
+}
+
+
+        .task {
+            background: #ffffff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .completed {
+            text-decoration: line-through;
+            color: gray;
+        }
+
+        .reminder {
+            border-left: 5px solid red;
+            padding-left: 10px;
+        }
+
+        .input-container {
+            width: 35%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-left: 20px;
+        }
+
+        input, button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+            border: none;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .task-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .task-buttons button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left side: Task List -->
+        <div class="task-list">
+            <h2>Tasks</h2>
+            <div id="taskList"></div>
+        </div>
+
+        <!-- Right side: Add Task -->
+        <div class="input-container">
+            <h2>Add Task</h2>
+            <input type="text" id="taskInput" placeholder="Enter task">
+            <input type="date" id="dateInput">
+            <label>
+                <input type="checkbox" id="reminderInput"> Mark as Reminder
+            </label>
+            <button onclick="addTask()">Add Task</button>
+            <button onclick="shutdownServer()">Shutdown Server</button>
+
+<script>
+function shutdownServer() {
+    fetch("/shutdown", { method: "POST" })
+        .then(response => response.json())
+        .then(data => alert(data.message));
+}
+</script>
+
+        </div>
+    </div>
+
+    <script>
+        function addTask() {
+            let task = document.getElementById("taskInput").value;
+            let date = document.getElementById("dateInput").value;
+            let reminder = document.getElementById("reminderInput").checked;
+
+            fetch("/add_task", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ task, date, reminder }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // alert(data.message);
+                getTasks();
+            });
+        }
+
+        function getTasks() {
+            fetch("/get_tasks")
+            .then(response => response.json())
+            .then(tasks => {
+                let taskList = document.getElementById("taskList");
+                taskList.innerHTML = "";
+
+                let groupedTasks = {};
+                tasks.forEach(task => {
+                    if (!groupedTasks[task.date]) {
+                        groupedTasks[task.date] = [];
+                    }
+                    groupedTasks[task.date].push(task);
+                });
+
+                Object.keys(groupedTasks).sort().forEach(date => {
+                    let dateDiv = document.createElement("div");
+                    dateDiv.innerHTML = `<h3>${date}</h3>`;
+
+                    groupedTasks[date].forEach(task => {
+                        let taskDiv = document.createElement("div");
+                        taskDiv.classList.add("task");
+                        if (task.completed) taskDiv.classList.add("completed");
+                        if (task.reminder) taskDiv.classList.add("reminder");
+
+                        taskDiv.innerHTML = `
+                            <span>${task.task}</span>
+                            <div class="task-buttons">
+                                <button onclick="toggleComplete('${task.task}')">✔️</button>
+                                <button onclick="deleteTask('${task.task}')">🗑️</button>
+                            </div>
+                        `;
+
+                        dateDiv.appendChild(taskDiv);
+                    });
+
+                    taskList.appendChild(dateDiv);
+                });
+            });
+        }
+
+        function toggleComplete(task) {
+            fetch("/update_task", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ task }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // alert(data.message);
+                getTasks();
+            });
+        }
+
+        function deleteTask(task) {
+            fetch("/delete_task", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ task }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // alert(data.message);
+                getTasks();
+            });
+        }
+
+        getTasks();
+    </script>
+</body>
+</html>
